@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
+import { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 export async function GET(
   request: Request,
@@ -7,13 +8,13 @@ export async function GET(
 ) {
   const { dept } = params;
 
-  const snapshot = await db
+  const snapshot = await getDb()
     .collection("files")
     .where("department", "==", dept)
     .orderBy("uploadedAt", "desc")
     .get();
 
-  const files = snapshot.docs.map(doc => ({
+  const files = snapshot.docs.map((doc: QueryDocumentSnapshot) => ({
     id: doc.id,
     ...doc.data(),
   }));

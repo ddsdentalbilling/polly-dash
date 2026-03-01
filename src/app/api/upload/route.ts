@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { bucket, db } from "@/lib/firebase";
+import { getBucket, getDb } from "@/lib/firebase";
 import { v4 as uuid } from "uuid";
 
 const VALID_DEPARTMENTS = ["operations", "it", "finance", "hr", "marketing-sales"];
@@ -24,14 +24,14 @@ export async function POST(request: NextRequest) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const objectName = `${department}/${Date.now()}-${uuid()}-${safeName}`;
 
-    const uploaded = bucket.file(objectName);
+    const uploaded = getBucket().file(objectName);
     await uploaded.save(buffer, {
       metadata: {
         contentType: file.type || "application/octet-stream",
       },
     });
 
-    const docRef = await db.collection("files").add({
+    const docRef = await getDb().collection("files").add({
       department,
       name: safeName,
       objectName,
