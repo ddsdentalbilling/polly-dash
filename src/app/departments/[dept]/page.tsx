@@ -15,6 +15,7 @@ const deptMeta: Record<string, { name: string; icon: string; phase: string; desc
 };
 
 interface UploadedFile {
+  id: string;
   name: string;
   size: number;
   uploadedAt: string;
@@ -69,6 +70,20 @@ export default function DepartmentPage() {
     setMessage(`✅ ${uploaded} file${uploaded !== 1 ? "s" : ""} uploaded`);
     fetchFiles();
     setTimeout(() => setMessage(""), 3000);
+  };
+
+  const handleDownload = async (fileId: string, fileName: string) => {
+    try {
+      const res = await fetch(`/api/files/${dept}/${fileId}/download`);
+      if (res.ok) {
+        const { url } = await res.json();
+        window.open(url, "_blank");
+      } else {
+        alert("Could not download file. Please try again.");
+      }
+    } catch {
+      alert("Error downloading file.");
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -173,15 +188,23 @@ export default function DepartmentPage() {
           ) : (
             <div className="space-y-2">
               {files.map((file) => (
-                <div key={file.name} className="flex items-center gap-3 p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                <div key={file.id} className="flex items-center gap-3 p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors group">
                   <span className="text-xl">{fileIcon(file.name)}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{file.name}</p>
                     <p className="text-xs text-muted-foreground">{formatSize(file.size)}</p>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">
+                  <span className="text-xs text-muted-foreground shrink-0 mr-2">
                     {new Date(file.uploadedAt).toLocaleDateString()}
                   </span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleDownload(file.id, file.name)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    ⬇️
+                  </Button>
                 </div>
               ))}
             </div>
