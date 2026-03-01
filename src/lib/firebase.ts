@@ -10,6 +10,7 @@ function getFirebaseApp() {
   return getApps().length
     ? getApp()
     : initializeApp({
+        // Allow undefined storageBucket during build time; it will be provided at runtime
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
       });
 }
@@ -23,7 +24,14 @@ export function getDb(): Firestore {
 
 export function getBucket(): Bucket {
   if (!_bucket) {
-    _bucket = getStorage(getFirebaseApp()).bucket();
+    // If bucket name is missing (build time), don't throw yet.
+    // The bucket() call requires a name if the app options didn't have one.
+    // But we only call getBucket() at runtime in API routes.
+    const app = getFirebaseApp();
+    const storage = getStorage(app);
+    // At runtime, if env var is missing, this will still fail, which is correct behavior.
+    // But at build time, Next.js won't execute this function unless it prerenders a page that calls it.
+    _bucket = storage.bucket(); 
   }
   return _bucket;
 }
