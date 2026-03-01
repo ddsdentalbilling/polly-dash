@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { bucket, db } from "@/lib/firebase";
+import { v4 as uuid } from "uuid";
 
-const WORKSPACE = process.env.WORKSPACE_DIR || path.join(process.env.HOME || "/home/nina", ".openclaw", "workspace");
 const VALID_DEPARTMENTS = ["operations", "it", "finance", "hr", "marketing-sales"];
 
 export async function POST(request: NextRequest) {
@@ -19,25 +18,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid department" }, { status: 400 });
     }
 
-    const uploadDir = path.join(WORKSPACE, "departments", department, "uploads");
-    await mkdir(uploadDir, { recursive: true });
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Sanitize filename
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const filePath = path.join(uploadDir, safeName);
+    const objectName = `${department}/${Date.now()}-${uuid()}-${safeName}`;
 
-    await writeFile(filePath, buffer);
+    const uploaded = bucket.file(objectName);
+    await uploaded.save(buffer, {
+      metadata: {
+        contentType: file.type || "application/octet-stream",
+      },
+    });
+
+    const docRef = await db.collection("files").add({
+      department,
+      name: safeName,
+      objectName,
+      size: buffer.length,
+      contentType: file.type || "application/octet-stream",
+      uploadedAt: Date.now(),
+    });
 
     return NextResponse.json({
       success: true,
       file: {
+        id: docRef.id,
         name: safeName,
-        size: buffer.length,
         department,
+        size: buffer.length,
         uploadedAt: new Date().toISOString(),
+        objectName,
       },
     });
   } catch (error) {
